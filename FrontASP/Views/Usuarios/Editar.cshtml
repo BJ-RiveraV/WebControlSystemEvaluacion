@@ -1,0 +1,153 @@
+﻿@model UpdateUserDTO
+
+<div class="card shadow border-0 mt-4" style="width:100%;">
+
+    <div class="card-header ml-0 py-3">
+
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="py-2">Editar Usuario</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card-body p-4">
+
+        <form method="post" asp-action="Editar">
+            <div class="border p-3 mt-4">
+
+                <input asp-for="Id" hidden />
+
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Nombre" class="form-control border-0 shadow" />
+                    <label asp-for="Nombre" class="ms-2"></label>
+                    <span asp-validation-for="Nombre" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="NumeroDocumento" class="form-control border-0 shadow" />
+                    <label asp-for="NumeroDocumento" class="ms-2"></label>
+                    <span asp-validation-for="NumeroDocumento" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Direccion" class="form-control border-0 shadow" />
+                    <label asp-for="Direccion" class="ms-2"></label>
+                    <span asp-validation-for="Direccion" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Correo" class="form-control border-0 shadow" />
+                    <label asp-for="Correo" class="ms-2"></label>
+                    <span asp-validation-for="Correo" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="FechaNacimiento" class="form-control border-0 shadow" />
+                    <label asp-for="FechaNacimiento" class="ms-2"></label>
+                    <span asp-validation-for="FechaNacimiento" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <select id="listaDepartamentos" asp-for="DepartamentoId" class="form-select border-0 shadow">
+                        <option disabled selected>--Seleccione un departamento--</option>
+                    </select>
+                    <label asp-for="DepartamentoId" class="ms-2"></label>
+                    <span asp-validation-for="DepartamentoId" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <select id="listaProvincias" asp-for="ProvinciaId" class="form-select border-0 shadow">
+                        <option disabled selected>--Seleccione una provincia--</option>
+                    </select>
+                    <label asp-for="ProvinciaId" class="ms-2"></label>
+                    <span asp-validation-for="ProvinciaId" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12 my-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" id="masc" type="radio" asp-for="Sexo" value=@true>
+                        <label class="form-check-label" for="masc">
+                            Masculino
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" id="fem" type="radio" asp-for="Sexo" value=@false>
+                        <label class="form-check-label" for="fem" >
+                            Femenino
+                        </label>
+                    </div>
+                </div>
+
+                <input type="hidden" id="depId" value="@Model.DepartamentoId"/>
+                <input type="hidden" id="provId" value="@Model.ProvinciaId"/>
+
+                <div class="row mt-3" style="display: flex; justify-content:end;">
+                    <div class="col-6 col-md-3">
+                        <a asp-controller="Usuarios" asp-action="Index" class="btn btn-outline-secondary form-control">Cancelar</a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-primary form-control">Guardar</button>
+                    </div>
+
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts{
+
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+
+
+    <script>
+        $(document).ready(function () {
+            $("#listaDepartamentos").change(function () {
+                $.get("/Usuarios/ObtenerProvinciasPorDepartamento", { id: $("#listaDepartamentos").val() }, function (data) {
+                    $("#listaProvincias").empty();
+                    $("#listaProvincias").append("<option value> -- Seleccione una provincia" + " --</option>")
+                    $.each(data, function (index, provincia) {
+                        $("#listaProvincias").append("<option value='" + provincia.id + "'>" + provincia.nombre + "</option>")
+                    });
+                });
+            });
+        });
+
+        $(document).ready(function () {
+            $.get("/Usuarios/ObtenerDepartamentos", function (data) {
+                $("#listaDepartamentos").empty();
+                $("#listaDepartamentos").append("<option value>--Seleccione un departamento--</option>")
+                $.each(data, function (index, departamento) {
+                    var dep = $("#depId").val()
+                    if (departamento.id == dep) {
+                        $("#listaDepartamentos").append("<option selected value='" + departamento.id + "'>" + departamento.nombre + "</option>")
+                    } else {
+                        $("#listaDepartamentos").append("<option value='" + departamento.id + "'>" + departamento.nombre + "</option>")
+                    }                    
+                });
+            });
+        });
+
+        $(document).ready(function () {
+            var dep = $("#depId").val()
+            var prov = $("#provId").val()
+            $.get("/Usuarios/ObtenerProvinciasPorDepartamento", { id: dep }, function (data) {
+                $("#listaProvincias").empty();
+                $("#listaProvincias").append("<option value>--Seleccione un provincia--</option>")
+                $.each(data, function (index, provincia) {                    
+                    if (provincia.id == prov) {
+                        $("#listaProvincias").append("<option selected value='" + provincia.id + "'>" + provincia.nombre + "</option>")
+                    } else {
+                        $("#listaProvincias").append("<option value='" + provincia.id + "'>" + provincia.nombre + "</option>")
+                    }
+                });
+            });
+        });
+
+
+    </script>
+
+}
+
+
+

@@ -1,0 +1,156 @@
+﻿@page "/"
+@page "/usuarios"
+
+@inject IClienteUsuarios _clienteUsuarios;
+@inject NavigationManager _navigationManager;
+@inject NotificationService _notificationService;
+@inject DialogService _dialogService;
+
+<div style="max-width=95%">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Style="margin-bottom: 10px;">
+        <h3>Lista de Usuarios</h3>
+        <RadzenButton Click=@(args => Crear()) Text="Crear" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" />
+
+    </RadzenStack>
+
+
+    <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Advanced"
+                    AllowSorting="true" PageSize="10" AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left"
+                    Data="@data" TItem="ObtenerUsuarioDTO" ColumnWidth="300px" LogicalFilterOperator="LogicalFilterOperator.Or" ShowPagingSummary="true"
+                    IsLoading=@isLoading @ref=refData>
+        <Columns>
+            <RadzenDataGridColumn Property="Nombre" Filterable="false" Title="Nombres" Width="250px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn Property="FechaNacimiento" Title="Fecha de nacimiento" Width="160px" FormatString="{0:d}" />
+            <RadzenDataGridColumn Property="NumeroDocumento" Title="DNI" Width="160px" />
+            <RadzenDataGridColumn Property="Direccion" Title="Dirección" Width="200px" />
+            <RadzenDataGridColumn Property="Correo" Title="E-Mail" Width="200px" />
+            <RadzenDataGridColumn Title="Sexo" Width="160px">
+                <Template Context="data">
+                    @(data.Sexo == true ? "Masculino" : "Femenino")
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Accion" Width="100px">
+                <Template Context="data">
+                    <RadzenButton Click=@(args => Editar(data.Id)) Icon="edit" ButtonStyle="ButtonStyle.Warning" />
+                    <RadzenButton Click=@(args => Eliminar(data.Id)) Icon="delete" ButtonStyle="ButtonStyle.Danger" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</div>
+
+
+
+@code {
+    List<ObtenerUsuarioDTO> data;
+    RadzenDataGrid<ObtenerUsuarioDTO> refData = new(); 
+
+    bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarUsuarios();
+    }
+
+    async Task CargarUsuarios()
+    {
+        isLoading = true;
+
+        var respuesta = await _clienteUsuarios.ObtenerUsuarios();
+
+        if (!respuesta.Error)
+        {
+            data = respuesta.Response;
+        }
+
+        isLoading = false;
+    }
+
+    protected void Crear()
+    {
+        _navigationManager.NavigateTo("usuarios/crear");
+    }
+
+    protected void Editar(int id)
+    {
+        _navigationManager.NavigateTo($"usuarios/editar/{id}");
+    }
+
+    protected async Task Eliminar(int id)
+    {
+        var respuestaConfirmacion = await _dialogService.Confirm(message: "¿Esta seguro que desea eliminar a este usuario_", title: "Eliminar", 
+            new ConfirmOptions() { CancelButtonText = "No", OkButtonText = "Si" });
+
+        if (!respuestaConfirmacion.Value)
+        {
+            return;
+        }
+
+        ModeloRespuestaHTTP<string?> respuesta = default;
+        InvokeAsync(async () =>
+        {
+            respuesta = await _clienteUsuarios.EliminarUsuario(id);
+            _dialogService.Close();
+        });
+        await mostrarMensajeDeCarga();
+        // var respuesta = await _clienteUsuarios.EliminarUsuario(id);
+        // _dialogService.Close();
+        // await mostrarMensajeDeCarga();
+
+        if (respuesta.Error)
+        {
+            var error = await respuesta.ObtenerMensajeError();
+            MostrarMensajeError(error);
+            return;
+        }
+
+        MostrarMensajeExitoso("El usuario fue eliminado");
+        await CargarUsuarios();
+        await refData.Reload();
+    }
+
+    async Task mostrarMensajeDeCarga()
+    {
+        await _dialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, "Cargando...");
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    void MostrarMensajeExitoso(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Exito <br /> @DateTime.Now</RadzenText>,
+            Detail = mensaje
+        });
+    }
+
+    void MostrarMensajeError(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Error: <br /> @DateTime.Now</RadzenText>,
+            Detail = mensaje
+        });
+    }
+
+
+}

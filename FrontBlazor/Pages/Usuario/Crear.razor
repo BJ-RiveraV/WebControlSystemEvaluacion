@@ -1,0 +1,172 @@
+﻿@page "/usuarios/crear";
+@using System.Globalization
+
+@inject IClienteUsuarios _clienteUsuarios;
+@inject IClienteGeo _clienteGeo;
+@inject NotificationService _notificationService;
+@inject NavigationManager _navigationManager;
+@inject DialogService _dialogService;
+
+<RadzenText TextStyle="TextStyle.H4" TagName="TagName.H4">Crear nuevo usuario</RadzenText>
+
+<RadzenTemplateForm TItem="CrearUsuario" Data="@nuevoUsuario" Submit="onSubmit">
+
+<RadzenCard Class="rz-my-4 rz-mx-auto" >
+
+    <div class="rz-px-1 rz-py-3 rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Nombre</RadzenText>
+        <RadzenTextBox  Name="Nombre" Placeholder="Nombre..." @bind-Value=@nuevoUsuario.usuario.Nombre Style="display: block; width: 100%;" />
+        <RadzenRequiredValidator Component="Nombre" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+    </div>
+
+    <div class="rz-px-1 rz-py-3 rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">DNI</RadzenText>
+            <RadzenNumeric @bind-Value=@nuevoUsuario.usuario.NumeroDocumento Name="DNI" Style="display: block; width: 100%;" Placeholder="DNI..." Min="0" />
+        <RadzenRegexValidator Component="DNI" Text="El Dni debe contener 8 digitos" Pattern="^\d{8}$" Popup=true Style="position: absolute" />
+
+    </div>
+
+    <div class="rz-px-1 rz-py-3 rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Dirección</RadzenText>
+        <RadzenTextBox Placeholder="Dirección..." @bind-Value=nuevoUsuario.usuario.Direccion Name="Direccion" Style="display: block; width: 100%;" />
+        <RadzenRequiredValidator Component="Direccion" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+
+    </div>
+
+    <div class="rz-px-1 rz-py-3 rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Correo</RadzenText>
+           <RadzenTextBox Placeholder="Correo..." @bind-Value=nuevoUsuario.usuario.Correo Name="Correo" Style="display: block; width: 100%;" />
+        <RadzenRequiredValidator Component="Correo" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+        <RadzenEmailValidator Component="Correo" Text="Ingrese un correo valido" Popup=true Style="position: absolute" />
+    </div> 
+
+    
+    <div class="rz-px-1 rz-py-3 rz-mb-4">
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+        <div >
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Departamento</RadzenText>
+            <RadzenDropDown Style="width:300px;display: block;" Name="Departamento" TValue="int" @bind-Value="@nuevoUsuario.usuario.DepartamentoId" Placeholder="Selecciona un departamento" AllowFiltering="true"
+                Data="@(nuevoUsuario.departamentos)" TextProperty="Nombre" ValueProperty="Id" Change="@(args => { nuevoUsuario.provincias = nuevoUsuario.departamentos.FirstOrDefault(p => p.Id == nuevoUsuario.usuario.DepartamentoId).Provincias; desabilitado = false; })" />
+            <RadzenRequiredValidator Component="Departamento" Text="Este campo es obligatorio" Popup=true Style="position: absolute" />
+        </div>
+
+        <div >
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Provincia</RadzenText>
+            <RadzenDropDown Disabled=@desabilitado Name="Provincia" Style="display: block;width:300px" TValue="int" @bind-Value=@nuevoUsuario.usuario.ProvinciaId Placeholder="Seleccione una provincia"
+                Data="@(nuevoUsuario.provincias)" ValueProperty="Id" TextProperty="Nombre"  />
+            <RadzenRequiredValidator Component="Provincia" Text="Este campo es obligatorio" Popup=true Style="position: absolute" />
+        </div>
+
+        <div style="padding-bottom: 0px;">
+            <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Fecha de Nacimiento</RadzenText>
+            <RadzenDatePicker @bind-Value=@nuevoUsuario.usuario.FechaNacimiento Style="display: block" Name="FechaNacimiento" ShowCalendarWeek />
+            <RadzenRequiredValidator Component="FechaNacimiento" DefaultValue=null Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+            <RadzenCustomValidator Component="FechaNacimiento" Validator="@(() => ValidarFecha(nuevoUsuario.usuario.FechaNacimiento))" Text="Este campo es obligatorio y no puede ser igual a la fecha actual" Style="position: absolute" Popup=true />
+        </div>
+
+        <div style="padding-bottom: 0px;">
+            <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Sexo</RadzenText>
+            <RadzenRadioButtonList @bind-Value=@nuevoUsuario.usuario.Sexo TValue="bool" class="mb-5">
+                <Items>
+                    <RadzenRadioButtonListItem Text="Masculino" Value="true" />
+                    <RadzenRadioButtonListItem Text="Femenino" Value="false" />
+                </Items>
+            </RadzenRadioButtonList>
+        </div>
+        </RadzenStack>
+    </div>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">
+        <RadzenButton Variant="Variant.Text" class="rz-text-secondary-color" Text="Cancelar" ButtonType="ButtonType.Button"
+        Click=@(args => onCancelar("¿Desea cancelar esta accion y regresar al listado de usuarios?", "Cancelar"))/>
+        <RadzenButton Variant="Variant.Text" Text="Crear" ButtonType="ButtonType.Submit" />
+    </RadzenStack>
+
+
+</RadzenCard>
+
+</RadzenTemplateForm>
+
+
+@code {
+    CrearUsuario nuevoUsuario = new CrearUsuario();
+    bool desabilitado = true;
+
+    public class CrearUsuario
+    {
+        public CreateUserDTO usuario { get; set; } = new CreateUserDTO();
+        public List<ObtenerDepartamentoDTO> departamentos { get; set; } = new List<ObtenerDepartamentoDTO>();
+        public List<ObtenerProvinciaDTO> provincias { get; set; } = new List<ObtenerProvinciaDTO>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var respuesta = await _clienteGeo.ObtenerDepartamentos();
+
+        if (!respuesta.Error)
+        {
+            nuevoUsuario.departamentos = respuesta.Response;
+        }
+    }
+
+    async Task onCancelar(string titulo, string mensaje)
+    {
+        var respuesta = await _dialogService.Confirm(message: mensaje, title: titulo, new ConfirmOptions() { CancelButtonText = "No", OkButtonText = "Si" });
+
+        if (respuesta.Value)
+        {
+            _navigationManager.NavigateTo("usuarios");
+        }
+
+        return;
+    }
+
+    public async Task onSubmit()
+    {
+        if (nuevoUsuario.usuario.ProvinciaId < 1)
+        {
+            MostrarMensajeError("Debe seleccionar un departamento y una provincia valida");
+            return;
+        }
+
+        var respuesta = await _clienteUsuarios.CrearUsuario(nuevoUsuario.usuario);
+
+        if (!respuesta.Error)
+        {
+            MostrarMensajeExitoso("El Usuario se registro correctamente");
+            _navigationManager.NavigateTo("usuarios");
+        }else
+        {
+            MostrarMensajeError(respuesta.Response);
+        }
+    }
+
+    bool ValidarFecha(DateTime fecha)
+    {
+        return fecha >= DateTime.Now.AddDays(-1) ? false : true;
+    }
+
+    void MostrarMensajeExitoso(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Exito <br /> @DateTime.Now</RadzenText>,
+                Detail = mensaje 
+        });
+    }
+
+    void MostrarMensajeError(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Error: <br /> @DateTime.Now</RadzenText>,
+                Detail = mensaje
+        });
+    }
+
+}

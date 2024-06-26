@@ -1,0 +1,244 @@
+﻿@page "/usuarios/editar/{Id:int}"
+
+@using System.Globalization
+
+@inject IClienteUsuarios _clienteUsuarios;
+@inject IClienteGeo _clienteGeo;
+@inject NotificationService _notificationService;
+@inject NavigationManager _navigationManager;
+@inject DialogService _dialogService;
+
+@if (usuario is not null)
+{
+    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H4">Editar usuario</RadzenText>
+
+    <RadzenTemplateForm TItem="EditarUsuario" Data="@usuarioEditar" Submit="onSubmit">
+
+        <RadzenCard Class="rz-my-4 rz-mx-auto">
+
+            <div class="rz-px-1 rz-py-3 rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Nombre</RadzenText>
+                <RadzenTextBox Name="Nombre" Placeholder="Nombre..." @bind-Value=@usuarioEditar.usuario.Nombre Style="display: block; width: 100%;" />
+                <RadzenRequiredValidator Component="Nombre" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+            </div>
+
+            <div class="rz-px-1 rz-py-3 rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">DNI</RadzenText>
+                <RadzenNumeric @bind-Value=@usuarioEditar.usuario.NumeroDocumento Name="DNI" Style="display: block; width: 100%;" Placeholder="DNI..." />
+                <RadzenRegexValidator Component="DNI" Text="El Dni debe contener 8 digitos" Pattern="^\d{8}$" Popup=true Style="position: absolute" />
+
+            </div>
+
+            <div class="rz-px-1 rz-py-3 rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Dirección</RadzenText>
+                <RadzenTextBox Placeholder="Dirección..." @bind-Value=usuarioEditar.usuario.Direccion Name="Direccion" Style="display: block; width: 100%;" />
+                <RadzenRequiredValidator Component="Direccion" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+
+            </div>
+
+            <div class="rz-px-1 rz-py-3 rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Correo</RadzenText>
+                <RadzenTextBox Placeholder="Correo..." @bind-Value=usuarioEditar.usuario.Correo Name="Correo" Style="display: block; width: 100%;" />
+                <RadzenRequiredValidator Component="Correo" Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+                <RadzenEmailValidator Component="Correo" Text="Ingrese un correo valido" Popup=true Style="position: absolute" />
+            </div>
+
+
+            <div class="rz-px-1 rz-py-3 rz-mb-4">
+
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <div>
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3" Style="display: block; width: 100%;">Departamento</RadzenText>
+                        <RadzenDropDown Style="width:300px;display: block;" Name="Departamento" TValue="int" @bind-Value="@departamentoId" Placeholder="Selecciona un departamento" AllowFiltering="true"
+                                        Data="@(usuarioEditar.departamentos)" TextProperty="Nombre" ValueProperty="Id" Change="@(args => { usuarioEditar.provincias = usuarioEditar.departamentos.FirstOrDefault(p => p.Id == departamentoId).Provincias; desabilitado = false; })" />
+                        <RadzenRequiredValidator Component="Departamento" Text="Este campo es obligatorio" Popup=true Style="position: absolute" />
+                    </div>
+
+                    <div>
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Provincia</RadzenText>
+                        <RadzenDropDown Disabled=@desabilitado Name="Provincia" Style="display: block;width:300px" TValue="int" @bind-Value=@usuarioEditar.usuario.ProvinciaId Placeholder="Seleccione una provincia"
+                                        Data="@(usuarioEditar.provincias)" ValueProperty="Id" TextProperty="Nombre" />
+                        <RadzenRequiredValidator Component="Provincia" Text="Este campo es obligatorio" Popup=true Style="position: absolute" />
+                    </div>
+
+                    <div style="padding-bottom: 0px;">
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H3">Fecha de Nacimiento</RadzenText>
+                        <RadzenDatePicker @bind-Value=@usuarioEditar.usuario.FechaNacimiento Style="display: block" Name="FechaNacimiento" ShowCalendarWeek />
+                        <RadzenRequiredValidator Component="FechaNacimiento" DefaultValue=null Text="Este es un campo obligatorio" Style="position: absolute" Popup=true />
+                        <RadzenCustomValidator Component="FechaNacimiento" Validator="@(() => ValidarFecha(usuarioEditar.usuario.FechaNacimiento))" Text="Este campo es obligatorio y no puede ser igual a la fecha actual" Style="position: absolute" Popup=true />
+                    </div>
+
+                    <div style="padding-bottom: 0px;">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.H3">Sexo</RadzenText>
+                        <RadzenRadioButtonList @bind-Value=@usuarioEditar.usuario.Sexo TValue="bool" class="mb-5">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="Masculino" Value="true" />
+                                <RadzenRadioButtonListItem Text="Femenino" Value="false" />
+                            </Items>
+                        </RadzenRadioButtonList>
+                    </div>
+                </RadzenStack>
+            </div>
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">
+                <RadzenButton Variant="Variant.Text" class="rz-text-secondary-color" Text="Cancelar" ButtonType="ButtonType.Button"
+                              Click=@(args => onCancelar("¿Desea cancelar esta accion y regresar al listado de usuarios?", "Cancelar")) />
+                <RadzenButton Variant="Variant.Text" Text="Guardar" ButtonType="ButtonType.Submit" />
+            </RadzenStack>
+
+
+        </RadzenCard>
+
+    </RadzenTemplateForm>
+}
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    ObtenerUsuarioDTO usuario;
+    EditarUsuario usuarioEditar = new();
+    bool desabilitado = true;
+    int departamentoId = 0;
+
+    class EditarUsuario
+    {
+        public UpdateUserDTO usuario { get; set; } = new UpdateUserDTO();
+        public List<ObtenerDepartamentoDTO> departamentos { get; set; } = new List<ObtenerDepartamentoDTO>();
+        public List<ObtenerProvinciaDTO> provincias { get; set; } = new List<ObtenerProvinciaDTO>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await cargarDepartamentos();
+        await cargarUsuario();
+    }
+
+    async Task onCancelar(string titulo, string mensaje)
+    {
+        var respuesta = await _dialogService.Confirm(message: mensaje, title: titulo, new ConfirmOptions() { CancelButtonText = "No", OkButtonText = "Si" });
+
+        if (respuesta.Value)
+        {
+            _navigationManager.NavigateTo("usuarios");
+        }
+
+        return;
+    }
+
+    async Task mostrarMensajeDeCarga()
+    {
+        await _dialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, "Cargando...");
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    async Task cargarDepartamentos()
+    {
+        var respuesta = await _clienteGeo.ObtenerDepartamentos();
+
+        if (!respuesta.Error)
+        {
+            usuarioEditar.departamentos = respuesta.Response;
+        }
+    }
+
+    async Task cargarUsuario()
+    {
+        var respuesta = await _clienteUsuarios.ObtenerUsuario(Id);
+
+        if (respuesta.Error)
+        {
+            var error = await respuesta.ObtenerMensajeError();
+            MostrarMensajeError(error);
+            _navigationManager.NavigateTo("usuarios");
+        }
+
+        usuario = respuesta.Response;
+        usuarioEditar.usuario = new UpdateUserDTO()
+        {
+            Id = usuario.Id,
+            Correo = usuario.Correo,
+            Direccion = usuario.Direccion,
+            FechaNacimiento = usuario.FechaNacimiento,
+            Nombre = usuario.Nombre,
+            NumeroDocumento = usuario.NumeroDocumento,
+            ProvinciaId = usuario.ProvinciaId
+        };
+
+        foreach (var departamento in usuarioEditar.departamentos)
+        {
+            if (departamento.Provincias.Any(p => p.Id == usuario.ProvinciaId))
+            {
+                departamentoId = departamento.Id;
+                usuarioEditar.provincias = departamento.Provincias;
+                desabilitado = false;
+                return;
+            }
+        }
+    }
+
+    async Task onSubmit()
+    {
+        if (usuarioEditar.usuario.ProvinciaId < 1)
+        {
+            MostrarMensajeError("Debe seleccionar un departamento y una provincia valida");
+            return;
+        }
+
+        var respuesta = await _clienteUsuarios.EditarUsuario(usuarioEditar.usuario);
+
+        if (!respuesta.Error)
+        {
+            MostrarMensajeExitoso("El Usuario se actualizo correctamente");
+            _navigationManager.NavigateTo("usuarios");
+        }
+        else
+        {
+            var error = await respuesta.ObtenerMensajeError();
+            MostrarMensajeError(error);
+        }
+    }
+
+    bool ValidarFecha(DateTime fecha)
+    {
+        return fecha >= DateTime.Now.AddDays(-1) ? false : true;
+    }
+
+    void MostrarMensajeExitoso(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Exito <br /> @DateTime.Now</RadzenText>,
+            Detail = mensaje
+        });
+    }
+
+    void MostrarMensajeError(string mensaje)
+    {
+        _notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 4000,
+                SummaryContent = ns =>@<RadzenText TextStyle="TextStyle.H6">Error: <br /> @DateTime.Now</RadzenText>,
+            Detail = mensaje
+        });
+    }
+
+}
